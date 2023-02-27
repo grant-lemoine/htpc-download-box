@@ -1,32 +1,32 @@
 version: "3.4"
 services:
-  vpn:
-    container_name: vpn
-    image: dperson/openvpn-client:latest
+  transmission-vpn:
+    container_name: transmission-vpn
+    image: haugene/transmission-openvpn
+    restart: unless-stopped
     cap_add:
-      - net_admin # required to modify network interfaces
-    restart: unless-stopped
+        - net_admin
     volumes:
-      - /dev/net:/dev/net:z # tun device
-      - ${ROOT}/config/vpn:/vpn # OpenVPN configuration
-    security_opt:
-      - label:disable
-    ports:
-      - 8112:8112 # port for deluge web UI to be reachable from local network
-    command: '-f "" -r 192.168.1.0/24' # enable firewall and route local network traffic
-
-  deluge:
-    container_name: deluge
-    image: linuxserver/deluge:latest
-    restart: unless-stopped
-    network_mode: service:vpn # run on the vpn network
+        - ${ROOT}/config/transmission-vpn:/config
+        - ${ROOT}/downloads:/data/completed
     environment:
-      - PUID=${PUID} # default user id, defined in .env
-      - PGID=${PGID} # default group id, defined in .env
-      - TZ=${TZ} # timezone, defined in .env
-    volumes:
-      - ${ROOT}/downloads:/downloads # downloads folder
-      - ${ROOT}/config/deluge:/config # config files
+        - OPENVPN_PROVIDER=NORDVPN
+        - NORDVPN_COUNTRY=CA
+        - NORDVPN_CATEGORY=legacy_p2p
+        - NORDVPN_PROTOCOL=udp
+        - OPENVPN_USERNAME=${VPN_USERNAME}
+        - OPENVPN_PASSWORD=${VPN_PASSWORD}
+        - OPENVPN_OPTS=--inactive 3600 --ping 10 --ping-exit 60
+        - WEBPROXY_ENABLED=false
+        - LOCAL_NETWORK=192.168.2.0/24
+        - TRANSMISSION_SCRAPE_PAUSED_TORRENTS_ENABLED=false
+        - DNS=8.8.8.8,8.8.4.4
+    logging:
+        driver: json-file
+        options:
+            max-size: 10m
+    ports:
+        - '9091:9091'
 
   jackett:
     container_name: jackett
@@ -34,13 +34,13 @@ services:
     restart: unless-stopped
     network_mode: host
     environment:
-      - PUID=${PUID} # default user id, defined in .env
-      - PGID=${PGID} # default group id, defined in .env
-      - TZ=${TZ} # timezone, defined in .env
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
       - /etc/localtime:/etc/localtime:ro
+      - ${ROOT}/config/jackett:/config
       - ${ROOT}/downloads/torrent-blackhole:/downloads # place where to put .torrent files for manual download
-      - ${ROOT}/config/jackett:/config # config files
 
   nzbget:
     container_name: nzbget
@@ -48,12 +48,12 @@ services:
     restart: unless-stopped
     network_mode: host
     environment:
-      - PUID=${PUID} # default user id, defined in .env
-      - PGID=${PGID} # default group id, defined in .env
-      - TZ=${TZ} # timezone, defined in .env
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
-      - ${ROOT}/downloads:/downloads # download folder
-      - ${ROOT}/config/nzbget:/config # config files
+      - ${ROOT}/config/nzbget:/config
+      - ${ROOT}/downloads:/downloads
 
   sonarr:
     container_name: sonarr
@@ -61,14 +61,14 @@ services:
     restart: unless-stopped
     network_mode: host
     environment:
-      - PUID=${PUID} # default user id, defined in .env
-      - PGID=${PGID} # default group id, defined in .env
-      - TZ=${TZ} # timezone, defined in .env
+      - PUID=${PUID} 
+      - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ${ROOT}/config/sonarr:/config # config files
-      - ${ROOT}/complete/tv:/tv # tv shows folder
-      - ${ROOT}/downloads:/downloads # download folder
+      - ${ROOT}/config/sonarr:/config
+      - ${ROOT}/complete/tv:/tv
+      - ${ROOT}/downloads:/sonarr/downloads # sonarr doesn't like downloads folder in root
 
   radarr:
     container_name: radarr
@@ -81,9 +81,9 @@ services:
       - TZ=${TZ} # timezone, defined in .env
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ${ROOT}/config/radarr:/config # config files
-      - ${ROOT}/complete/movies:/movies # movies folder
-      - ${ROOT}/downloads:/downloads # download folder
+      - ${ROOT}/config/radarr:/config
+      - ${ROOT}/complete/movies:/movies
+      - ${ROOT}/downloads:/radarr/downloads # radarr doesn't like downloads folder in root
 
   plex-server:
     container_name: plex-server
@@ -108,6 +108,6 @@ services:
       - TZ=${TZ} # timezone, defined in .env
       - UMASK_SET=022 #optional
     volumes:
-      - ${ROOT}/config/bazarr:/config # config files
-      - ${ROOT}/complete/movies:/movies # movies folder
-      - ${ROOT}/complete/tv:/tv # tv shows folder
+      - ${ROOT}/config/bazarr:/config
+      - ${ROOT}/complete/movies:/movies
+      - ${ROOT}/complete/tv:/tv
