@@ -111,3 +111,19 @@ services:
       - ${ROOT}/config/bazarr:/config
       - ${ROOT}/complete/movies:/movies
       - ${ROOT}/complete/tv:/tv
+
+  prowlarr:
+    container_name: prowlarr
+    image: linuxserver/prowlarr:latest
+    container_name: prowlarr
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/prowlarr:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+
