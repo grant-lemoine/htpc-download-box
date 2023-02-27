@@ -115,7 +115,6 @@ services:
   prowlarr:
     container_name: prowlarr
     image: linuxserver/prowlarr:latest
-    container_name: prowlarr
     network_mode: host
     environment:
       - PUID=${PUID}
@@ -126,4 +125,4 @@ services:
     ports:
       - 9696:9696
     restart: unless-stopped
-
+    
